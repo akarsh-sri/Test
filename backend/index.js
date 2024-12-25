@@ -30,18 +30,47 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+
+
+// const session = require('express-session');
+// const MongoStore = require('connect-mongo');
+
+// Trust proxy (important for secure cookies behind proxies like Render or Heroku)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1); // Trust first proxy
+}
+
 // Session Middleware
 app.use(session({
-  secret: process.env.SESSION_SECRET,
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+  secret: process.env.SESSION_SECRET || 'default-secret', // Fallback secret for development
+  resave: false, // Do not resave sessions that are unchanged
+  saveUninitialized: false, // Do not save uninitialized sessions
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI,
+    ttl: 24 * 60 * 60, // Time to live (1 day in seconds)
+  }),
   cookie: {
-    secure: true, // Set to true in production
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    secure: process.env.NODE_ENV === 'production', // Enable secure cookies in production
+    httpOnly: true, // Prevent client-side JS from accessing cookies
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Cross-site cookie policy
+    maxAge: 24 * 60 * 60 * 1000, // Cookie expiration (1 day in milliseconds)
   },
 }));
+
+
+
+// // Session Middleware
+// app.use(session({
+//   secret: process.env.SESSION_SECRET,
+//   resave: false,
+//   saveUninitialized: false,
+//   store: MongoStore.create({ mongoUrl: process.env.MONGO_URI }),
+//   cookie: {
+//     secure: true, // Set to true in production
+//     httpOnly: true,
+//     maxAge: 24 * 60 * 60 * 1000, // 1 day
+//   },
+// }));
 
 // Passport Middleware
 app.use(passport.initialize());
